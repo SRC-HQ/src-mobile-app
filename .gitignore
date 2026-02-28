@@ -32,6 +32,8 @@ yarn-error.*
 # local env files
 .env*.local
 .env
+.env.devnet
+.env.mainnet
 
 # typescript
 *.tsbuildinfo
@@ -41,3 +43,10 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Skills
+SKILL.md
+.agents
+
+# References - DO NOT COMPILE
+_src-monorepo-reference/

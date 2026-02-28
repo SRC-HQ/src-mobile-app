@@ -1,2 +1,17 @@
 @import 'tailwindcss';
 @import 'uniwind';
+@import 'heroui-native/styles';
+
+@source './node_modules/heroui-native/lib';
+
+@theme {
+  --color-primary: #b6b0ff;
+  --color-secondary: #5b5880;
+  --color-background: #100e12;
+  --color-panel: #1a1a2e;
+  --color-card: #252540;
+  --color-accent: #b6b0ff;
+  --color-success: #00ff88;
+  --color-warning: #ffaa00;
+  --color-error: #ff4444;
+}

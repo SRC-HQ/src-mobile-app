@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "skills": {
+    "expo-react-native-typescript": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "computedHash": "ef1a36e2a4e803d4e754eabea9b851221ee37b5c416256dbc9d2d1b333447f4b"
+    },
+    "heroui-native": {
+      "source": "heroui-inc/heroui",
+      "sourceType": "github",
+      "computedHash": "e92d38f7d624847f666ff8ea3e545d708551e8ed65f043ac6fd4a19bb3964767"
+    },
+    "solana-mobile": {
+      "source": "agentic-reserve/agent_skill",
+      "sourceType": "github",
+      "computedHash": "eb413003432547f0959886964faea332bf95184ce48a808cfaef407c625b298c"
+    },
+    "uniwind": {
+      "source": "pproenca/dot-skills",
+      "sourceType": "github",
+      "computedHash": "7cc6b43d295e74414ca153d960550e2a432e1708987a5790e741b959aa553cb1"
+    }
+  }
+}

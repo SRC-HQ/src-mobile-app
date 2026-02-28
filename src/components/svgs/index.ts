@@ -1,0 +1,8 @@
+export { default as AvatarDefaultIcon } from './AvatarDefaultIcon'
+export { default as SolColorIconSvg } from './SolColorIconSvg'
+export { default as MatchesIconSvg } from './MatchesIconSvg'
+export { default as RacerIconSvg } from './RacerIconSvg'
+export { default as BabyKingIconSvg } from './BabyKingIconSvg'
+export { default as AccountIconSvg } from './AccountIconSvg'
+export { default as LeaderboardIconSvg } from './LeaderboardIconSvg'
+export { default as QRCodeIconSvg } from './QRCodeIconSvg'
