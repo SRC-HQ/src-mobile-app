@@ -79,10 +79,18 @@ export const ClaimBottomSheet = ({
                   Claim Winnings
                 </Text>
                 <Pressable
-                  onPress={() => onOpenChange(false)}
-                  className="w-10 h-10 items-center justify-center rounded-lg active:bg-white/10"
+                  onPress={onClaim}
+                  disabled={isClaiming || records.length === 0}
+                  className={`px-4 h-10 rounded-lg flex-row items-center justify-center ${
+                    isClaiming || records.length === 0 ? 'bg-white/10' : 'bg-[#FFD700] active:bg-[#FFA500]'
+                  }`}
                 >
-                  <Text className="text-white/80 text-3xl leading-none">×</Text>
+                  <Text
+                    style={{ fontFamily: 'Orbitron_700Bold' }}
+                    className={`text-sm ${isClaiming || records.length === 0 ? 'text-white/40' : 'text-black'}`}
+                  >
+                    {isClaiming ? 'Claiming...' : 'Claim Now'}
+                  </Text>
                 </Pressable>
               </View>
 
@@ -162,26 +170,11 @@ export const ClaimBottomSheet = ({
               </View>
             </ScrollView>
 
-            {/* Footer with Claim Button */}
+            {/* Footer - Removed, button moved to header */}
             <View
               className="px-6 py-4 border-t border-white/10 bg-[#1a1b1e]"
               style={{ paddingBottom: Math.max(16, insets.bottom) }}
-            >
-              <Pressable
-                onPress={onClaim}
-                disabled={isClaiming || records.length === 0}
-                className={`h-14 rounded-xl flex-row items-center justify-center ${
-                  isClaiming || records.length === 0 ? 'bg-white/10' : 'bg-[#FFD700] active:bg-[#FFA500]'
-                }`}
-              >
-                <Text
-                  style={{ fontFamily: 'Orbitron_700Bold' }}
-                  className={`text-base ${isClaiming || records.length === 0 ? 'text-white/40' : 'text-black'}`}
-                >
-                  {isClaiming ? 'Claiming...' : 'Claim Now'}
-                </Text>
-              </Pressable>
-            </View>
+            />
           </View>
         </BottomSheet.Content>
       </BottomSheet.Portal>
