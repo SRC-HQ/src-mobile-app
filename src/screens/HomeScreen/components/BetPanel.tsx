@@ -8,6 +8,7 @@ import { usePhaseTimer } from '../../../game/hooks/usePhaseTimer'
 import { useBetting } from '../../../hooks/useBetting'
 import { useWalletBalance } from '../../../hooks/useWalletBalance'
 import { useUserBets } from '../../../hooks/useUserBets'
+import { useRoundStatus } from '../../../hooks/useRoundStatus'
 import { formatSolAmount } from '../../../utils/format'
 
 const racerIcons = [
@@ -52,6 +53,7 @@ export const BetPanel = React.memo(() => {
   const { babyKingTotal, placeBet, loading: bettingLoading } = useBetting()
   const { balance, refetch: refetchBalance } = useWalletBalance()
   const { data: userBets, refetch: refetchUserBets } = useUserBets(roundId, isConnected)
+  const { status: roundStatus } = useRoundStatus(roundId)
 
   const [betMode, setBetMode] = useState<'manual' | 'auto'>('manual')
   const [selectedRacers, setSelectedRacers] = useState<number[]>([])
@@ -101,6 +103,17 @@ export const BetPanel = React.memo(() => {
       return
     }
 
+    // Check on-chain round status first
+    if (roundStatus?.isLocked) {
+      Alert.alert('Betting Locked', 'Betting is currently locked for this round. Please wait for the next round.')
+      return
+    }
+
+    if (roundStatus?.isResolved) {
+      Alert.alert('Round Ended', 'This round has already ended. Please wait for the next round.')
+      return
+    }
+
     if (phase !== 'PREPARATION') {
       Alert.alert('Selection Closed', 'Selection is only available during the preparation phase.')
       return
@@ -146,6 +159,7 @@ export const BetPanel = React.memo(() => {
     }
   }, [
     isConnected,
+    roundStatus,
     phase,
     selectedRacers,
     betAmount,
@@ -390,10 +404,22 @@ export const BetPanel = React.memo(() => {
 
       {/* Submit Button */}
       <Pressable
-        disabled={!isConnected || phase !== 'PREPARATION' || bettingLoading || selectedRacers.length === 0}
+        disabled={
+          !isConnected ||
+          phase !== 'PREPARATION' ||
+          bettingLoading ||
+          selectedRacers.length === 0 ||
+          roundStatus?.isLocked ||
+          roundStatus?.isResolved
+        }
         onPress={handleSubmitSelection}
         className={`w-full py-4 rounded-full items-center ${
-          isConnected && phase === 'PREPARATION' && !bettingLoading && selectedRacers.length > 0
+          isConnected &&
+          phase === 'PREPARATION' &&
+          !bettingLoading &&
+          selectedRacers.length > 0 &&
+          !roundStatus?.isLocked &&
+          !roundStatus?.isResolved
             ? 'bg-[#b6b0ff] active:bg-[#a5a0ef]'
             : 'bg-white/10'
         }`}
@@ -401,18 +427,27 @@ export const BetPanel = React.memo(() => {
         <Text
           style={{ fontFamily: 'SpaceMono_700Bold' }}
           className={`text-base ${
-            isConnected && phase === 'PREPARATION' && !bettingLoading && selectedRacers.length > 0
+            isConnected &&
+            phase === 'PREPARATION' &&
+            !bettingLoading &&
+            selectedRacers.length > 0 &&
+            !roundStatus?.isLocked &&
+            !roundStatus?.isResolved
               ? 'text-black'
               : 'text-white/40'
           }`}
         >
           {bettingLoading
             ? 'Processing...'
-            : phase !== 'PREPARATION'
-              ? 'Selection Closed'
-              : betMode === 'manual'
-                ? 'Pick Sperm'
-                : 'Start Auto'}
+            : roundStatus?.isLocked
+              ? 'Betting Locked'
+              : roundStatus?.isResolved
+                ? 'Round Ended'
+                : phase !== 'PREPARATION'
+                  ? 'Selection Closed'
+                  : betMode === 'manual'
+                    ? 'Pick Sperm'
+                    : 'Start Auto'}
         </Text>
       </Pressable>
     </ScrollView>
