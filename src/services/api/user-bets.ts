@@ -1,4 +1,6 @@
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://api.spermrace.club'
+import { ENV } from '../../config/env'
+
+const API_BASE = ENV.API_URL
 
 export interface UserBetSummary {
   total_bet: string

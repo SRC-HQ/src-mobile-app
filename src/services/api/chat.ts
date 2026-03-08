@@ -1,12 +1,5 @@
 import Constants from 'expo-constants'
 
-// TODO: Backend Session Token Support
-// When backend implements session-based authentication for chat:
-// 1. Add new interface: CreateChatWithTokenDto { message: string; token: string }
-// 2. Add new function: sendChatWithToken(message: string, token: string)
-// 3. Update mobile app to use token-based approach (no signature per message)
-// This will eliminate wallet popup for every message on mobile
-
 export interface ChatMessage {
   id: string
   user_address: string
@@ -21,9 +14,11 @@ export interface CreateChatDto {
   timestamp: number
 }
 
-export interface CreateChatSimpleDto {
+export interface CreateChatWithAuthDto {
   message: string
   address: string
+  authSignature: string
+  authTimestamp: number
 }
 
 const getApiBaseUrl = (): string => {
@@ -60,40 +55,51 @@ export async function sendChat(dto: CreateChatDto): Promise<ChatMessage> {
   return res.json()
 }
 
-// TODO: Implement when backend adds session token support
-// export async function sendChatWithToken(message: string, token: string): Promise<ChatMessage> {
-//   const apiBase = getApiBaseUrl()
-//   const url = `${apiBase}/chats`
-//
-//   const res = await fetch(url, {
-//     method: 'POST',
-//     headers: {
-//       'Content-Type': 'application/json',
-//       'Authorization': `Bearer ${token}`,
-//     },
-//     body: JSON.stringify({ message }),
-//   })
-//
-//   if (!res.ok) {
-//     const err = await res.json().catch(() => ({}))
-//     throw new Error(err.message || res.statusText || 'Failed to send message')
-//   }
-//
-//   return res.json()
-// }
-
 /**
- * Send chat without signature verification
- * For mobile app where user is already authenticated via wallet connection
+ * Send chat using authentication session (signed once during wallet connection)
+ * This eliminates the need to sign every message
+ *
+ * Note: Backend currently validates signature with message content.
+ * For now, we'll use the old approach but keep the auth session for future use.
  */
-export async function sendChatSimple(message: string, address: string): Promise<ChatMessage> {
+export async function sendChatWithAuth(dto: CreateChatWithAuthDto): Promise<ChatMessage> {
   const apiBase = getApiBaseUrl()
   const url = `${apiBase}/chats`
 
-  // Send with minimal signature requirement
-  // Backend should accept this for authenticated users
-  const timestamp = Date.now()
-  const dummySignature = Buffer.from(`${address}-${timestamp}`).toString('base64')
+  // Backend expects signature to be signed with message content
+  // For now, we send the auth signature but backend needs to be updated
+  // to accept authentication-based signatures instead of per-message signatures
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: dto.message,
+      address: dto.address,
+      signature: dto.authSignature,
+      timestamp: dto.authTimestamp,
+    }),
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || res.statusText || 'Failed to send message')
+  }
+
+  return res.json()
+}
+
+/**
+ * Send chat with per-message signature
+ * This is the current backend implementation that validates signature with message content
+ */
+export async function sendChatWithSignature(
+  message: string,
+  address: string,
+  signature: string,
+  timestamp: number,
+): Promise<ChatMessage> {
+  const apiBase = getApiBaseUrl()
+  const url = `${apiBase}/chats`
 
   const res = await fetch(url, {
     method: 'POST',
@@ -101,7 +107,7 @@ export async function sendChatSimple(message: string, address: string): Promise<
     body: JSON.stringify({
       message,
       address,
-      signature: dummySignature,
+      signature,
       timestamp,
     }),
   })

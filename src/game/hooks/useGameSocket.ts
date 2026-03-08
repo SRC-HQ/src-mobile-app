@@ -1,24 +1,25 @@
 import { useEffect, useRef, useState } from 'react'
 import { GameSocketService } from '../services/GameSocketService'
 import { useGameStore } from '../../stores/gameStore'
+import { ENV } from '../../config/env'
 
 // Get WebSocket URL from environment
 const getSocketUrl = () => {
   console.log('🔍 [ENV DEBUG] All env vars:', {
-    WS_URL: process.env.EXPO_PUBLIC_WS_URL,
-    API_URL: process.env.EXPO_PUBLIC_API_URL,
-    NETWORK: process.env.EXPO_PUBLIC_SOLANA_NETWORK,
+    WS_URL: ENV.WS_URL,
+    API_URL: ENV.API_URL,
+    NETWORK: ENV.SOLANA_NETWORK,
   })
 
   // Use WS_URL if available, otherwise derive from API_URL
-  const wsUrl = process.env.EXPO_PUBLIC_WS_URL
+  const wsUrl = ENV.WS_URL
   if (wsUrl) {
     console.log('✅ Using WS_URL from env:', wsUrl)
     return wsUrl
   }
 
   // Fallback: derive from API_URL
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000'
+  const apiUrl = ENV.API_URL || 'http://localhost:4000'
   const derivedUrl = `${apiUrl.replace(/^http/, 'ws')}/game`
   console.warn('⚠️ WS_URL not found! Derived from API_URL:', derivedUrl)
   return derivedUrl
