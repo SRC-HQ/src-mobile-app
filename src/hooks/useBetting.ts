@@ -261,7 +261,6 @@ export const useBetting = () => {
         setLoading(false)
         return signature
       } catch (err: any) {
-        console.error('[useBetting] Submit selection failed:', err)
         setError(err.message || 'Transaction failed')
         setLoading(false)
         throw err
