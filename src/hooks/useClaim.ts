@@ -1,17 +1,17 @@
-import { useState, useCallback, useEffect } from 'react'
-import { Connection, PublicKey, Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js'
+import { useState, useCallback } from 'react'
+import { Connection, PublicKey, Transaction } from '@solana/web3.js'
 import { Program, AnchorProvider, BN, Idl } from '@coral-xyz/anchor'
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { SpermRace } from '../contracts/types/sperm_race'
 import * as IDL from '../contracts/idl/sperm_race.json'
 import { ENV, getRpcUrl, getCluster } from '../config/env'
+import type { DistributionRecord } from '../services/api/distribution-history'
 
 const PROGRAM_ID = new PublicKey(ENV.PROGRAM_ID)
 
-export const useBetting = () => {
+export const useClaim = () => {
   const { account } = useMobileWallet()
-  const [babyKingTotal, setBabyKingTotal] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -32,64 +32,29 @@ export const useBetting = () => {
     return pda
   }, [])
 
+  const getGlobalStatePda = useCallback((): PublicKey => {
+    const [pda] = PublicKey.findProgramAddressSync([Buffer.from('global_state')], PROGRAM_ID)
+    return pda
+  }, [])
+
   const getBabyKingVaultPda = useCallback((): PublicKey => {
     const [pda] = PublicKey.findProgramAddressSync([Buffer.from('baby_king_vault')], PROGRAM_ID)
     return pda
   }, [])
 
-  // Fetch Baby King vault total
-  useEffect(() => {
-    const fetchBabyKing = async () => {
-      try {
-        const connection = new Connection(getRpcUrl(), 'confirmed')
-        const pda = getBabyKingVaultPda()
-
-        // Fetch account info directly
-        const accountInfo = await connection.getAccountInfo(pda)
-
-        if (!accountInfo) {
-          console.warn('[useBetting] Baby King vault account not found')
-          setBabyKingTotal('0')
-          return
-        }
-
-        // Parse the account data
-        // BabyKingVault structure: total_accumulated (u64, 8 bytes) + bump (u8, 1 byte)
-        // Skip the 8-byte discriminator at the start
-        const data = accountInfo.data
-        if (data.length < 17) {
-          console.warn('[useBetting] Invalid Baby King vault data length')
-          setBabyKingTotal('0')
-          return
-        }
-
-        // Read u64 total_accumulated (little-endian) starting at byte 8
-        const totalAccumulatedBuffer = data.slice(8, 16)
-        const totalAccumulated = new BN(totalAccumulatedBuffer, 'le')
-
-        setBabyKingTotal(totalAccumulated.toString())
-      } catch (e) {
-        console.error('[useBetting] Failed to fetch baby king vault:', e)
-        setBabyKingTotal(null)
-      }
-    }
-
-    fetchBabyKing()
-    const interval = setInterval(fetchBabyKing, 10000)
-    return () => clearInterval(interval)
-  }, [getBabyKingVaultPda])
-
   /**
-   * Submit selection for selected sperms
-   * @param roundId - Current round ID
-   * @param selectedSperms - Set of sperm IDs to select
-   * @param amountPerSperm - Amount in SOL per sperm
+   * Claim winnings for multiple records
+   * @param records - Distribution records to claim
    * @returns Transaction signature
    */
-  const placeBet = useCallback(
-    async (roundId: number, selectedSperms: Set<number>, amountPerSperm: number) => {
+  const claimWinnings = useCallback(
+    async (records: DistributionRecord[]) => {
       if (!account?.address) {
         throw new Error('Wallet not connected')
+      }
+
+      if (records.length === 0) {
+        throw new Error('No records to claim')
       }
 
       setLoading(true)
@@ -98,17 +63,13 @@ export const useBetting = () => {
       try {
         const connection = new Connection(getRpcUrl(), 'confirmed')
         const userPublicKey = new PublicKey(account.address)
-        const lamports = Math.floor(amountPerSperm * LAMPORTS_PER_SOL)
         const cluster = getCluster()
 
-        console.log('[useBetting] Submit selection config:', {
+        console.log('[useClaim] Claim winnings config:', {
           cluster,
           network: ENV.SOLANA_NETWORK,
           rpcUrl: getRpcUrl(),
-          roundId,
-          selectedSperms: Array.from(selectedSperms),
-          amountPerSperm,
-          lamports,
+          recordsCount: records.length,
         })
 
         // Create a dummy wallet for building instructions
@@ -125,75 +86,84 @@ export const useBetting = () => {
         const idlWithProgramId = { ...IDL, address: PROGRAM_ID.toBase58() }
         const program = new Program<SpermRace>(idlWithProgramId as Idl, provider)
 
-        const roundAccountPda = getRoundAccountPda(roundId)
+        const globalStatePda = getGlobalStatePda()
+        const babyKingVaultPda = getBabyKingVaultPda()
 
-        // Check if betting is locked on-chain
-        try {
-          const roundAccountInfo = await connection.getAccountInfo(roundAccountPda)
-
-          if (!roundAccountInfo) {
-            throw new Error('Round not found. Please refresh and try again.')
-          }
-
-          const data = roundAccountInfo.data
-
-          // Parse RoundAccount manually (same structure as useRoundStatus)
-          if (data.length < 148) {
-            throw new Error('Invalid round data. Please refresh and try again.')
-          }
-
-          let offset = 8 // Skip discriminator
-          offset += 8 // Skip round_id
-          offset += 32 // Skip hashed_seed
-          offset += 8 // Skip end_slot
-          offset += 1 // Skip winner_id
-
-          // Read is_locked (bool)
-          const isLocked = data[offset] !== 0
-          offset += 1
-          offset += 8 // Skip total_pot
-
-          // Read is_resolved (bool)
-          const isResolved = data[offset] !== 0
-
-          console.log('[useBetting] Round account state:', {
-            roundId,
-            isLocked,
-            isResolved,
-          })
-
-          if (isLocked) {
-            throw new Error('Betting is currently locked. Please wait for the next round.')
-          }
-
-          if (isResolved) {
-            throw new Error('This round has already been resolved. Please wait for the next round.')
-          }
-        } catch (err: any) {
-          if (err.message.includes('Round not found') || err.message.includes('Invalid round data')) {
-            throw err
-          }
-          // If it's a parsing error or other error, throw it
-          throw err
+        // Fetch global state to get treasury address
+        const globalStateInfo = await connection.getAccountInfo(globalStatePda)
+        if (!globalStateInfo) {
+          throw new Error('Global state not found')
         }
 
-        // Build instructions for each sperm
+        // Parse treasury address from global state (skip 8 byte discriminator, then authority 32 bytes, then treasury 32 bytes)
+        const treasuryBuffer = globalStateInfo.data.slice(40, 72)
+        const treasury = new PublicKey(treasuryBuffer)
+
+        // Build instructions for each record
         const instructions: any[] = []
-        for (const spermId of Array.from(selectedSperms)) {
+        for (const record of records) {
+          const roundId = parseInt(record.round_id)
+          const spermId = record.winning_sperm_id
+          const roundAccountPda = getRoundAccountPda(roundId)
           const betRecordPda = getBetRecordPda(userPublicKey, roundId, spermId)
 
+          // Check if round is resolved
+          try {
+            const roundAccountInfo = await connection.getAccountInfo(roundAccountPda)
+
+            if (!roundAccountInfo) {
+              console.warn(`[useClaim] Round ${roundId} not found, skipping`)
+              continue
+            }
+
+            const data = roundAccountInfo.data
+
+            if (data.length < 148) {
+              console.warn(`[useClaim] Invalid round ${roundId} data, skipping`)
+              continue
+            }
+
+            let offset = 8 // Skip discriminator
+            offset += 8 // Skip round_id
+            offset += 32 // Skip hashed_seed
+            offset += 8 // Skip end_slot
+            offset += 1 // Skip winner_id
+            offset += 1 // Skip is_locked
+            offset += 8 // Skip total_pot
+
+            // Read is_resolved (bool)
+            const isResolved = data[offset] !== 0
+
+            if (!isResolved) {
+              console.warn(`[useClaim] Round ${roundId} not resolved yet, skipping`)
+              continue
+            }
+          } catch (err: any) {
+            console.warn(`[useClaim] Error checking round ${roundId}:`, err.message)
+            continue
+          }
+
+          // Build claim instruction
           const ix = await program.methods
-            .placeBet(new BN(roundId), spermId, new BN(lamports))
-            .accountsPartial({
+            .claimWinnings(spermId)
+            .accounts({
+              roundAccount: roundAccountPda,
+              globalState: globalStatePda,
+              babyKingVault: babyKingVaultPda,
               betRecord: betRecordPda,
               user: userPublicKey,
-            })
+              treasury: treasury,
+            } as any)
             .instruction()
 
           instructions.push(ix)
         }
 
-        console.log(`[useBetting] Built ${instructions.length} bet instructions`)
+        if (instructions.length === 0) {
+          throw new Error('No valid claims found. All rounds may already be claimed or not resolved yet.')
+        }
+
+        console.log(`[useClaim] Built ${instructions.length} claim instructions`)
 
         // Use Mobile Wallet Adapter to sign and send transaction
         const signature = await transact(async (wallet) => {
@@ -218,7 +188,7 @@ export const useBetting = () => {
             .toString('base64')
 
           // Authorize with correct cluster
-          console.log('[useBetting] Authorizing with cluster:', cluster)
+          console.log('[useClaim] Authorizing with cluster:', cluster)
 
           const authResult = await wallet.authorize({
             cluster,
@@ -228,7 +198,7 @@ export const useBetting = () => {
             },
           })
 
-          console.log('[useBetting] Authorization successful:', {
+          console.log('[useClaim] Authorization successful:', {
             authToken: authResult.auth_token ? 'present' : 'missing',
             accounts: authResult.accounts.length,
           })
@@ -237,7 +207,7 @@ export const useBetting = () => {
             payloads: [serializedTransaction],
           })
 
-          console.log('[useBetting] Transaction signed successfully')
+          console.log('[useClaim] Transaction signed successfully')
 
           // Deserialize signed transaction
           const signedTx = Transaction.from(Buffer.from(signResult.signed_payloads[0], 'base64'))
@@ -261,18 +231,17 @@ export const useBetting = () => {
         setLoading(false)
         return signature
       } catch (err: any) {
-        console.error('[useBetting] Submit selection failed:', err)
+        console.error('[useClaim] Claim winnings failed:', err)
         setError(err.message || 'Transaction failed')
         setLoading(false)
         throw err
       }
     },
-    [account?.address, getRoundAccountPda, getBetRecordPda],
+    [account?.address, getRoundAccountPda, getBetRecordPda, getGlobalStatePda, getBabyKingVaultPda],
   )
 
   return {
-    babyKingTotal,
-    placeBet,
+    claimWinnings,
     loading,
     error,
   }

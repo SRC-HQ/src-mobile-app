@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import { View, Text, ScrollView, Pressable, TextInput, Image, Alert } from 'react-native'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
+import { useToast } from 'heroui-native'
 import { SolColorIconSvg, MatchesIconSvg, BabyKingIconSvg, RacerIconSvg } from '../../../components/svgs'
 import { useGameStore } from '../../../stores/gameStore'
 import { useGameSocket } from '../../../game/hooks/useGameSocket'
@@ -10,6 +11,7 @@ import { useWalletBalance } from '../../../hooks/useWalletBalance'
 import { useUserBets } from '../../../hooks/useUserBets'
 import { useRoundStatus } from '../../../hooks/useRoundStatus'
 import { formatSolAmount } from '../../../utils/format'
+import { showPickSpermSuccessToast, showPickSpermErrorToast } from '../../../utils/toast'
 
 const racerIcons = [
   require('../../../../assets/game/images/icon_01.png'),
@@ -41,6 +43,7 @@ const LAMPORTS_PER_SOL = 1_000_000_000
 export const BetPanel = React.memo(() => {
   const { account } = useMobileWallet()
   const isConnected = !!account?.address
+  const { toast } = useToast()
 
   // Initialize WebSocket connection
   useGameSocket()
@@ -105,7 +108,7 @@ export const BetPanel = React.memo(() => {
 
     // Check on-chain round status first
     if (roundStatus?.isLocked) {
-      Alert.alert('Betting Locked', 'Betting is currently locked for this round. Please wait for the next round.')
+      Alert.alert('Pick Locked', 'Betting is currently locked for this round. Please wait for the next round.')
       return
     }
 
@@ -141,9 +144,8 @@ export const BetPanel = React.memo(() => {
     try {
       const signature = await placeBet(roundId, new Set(selectedRacers), parseFloat(betAmount))
 
-      Alert.alert('Selection Submitted!', `Transaction: ${signature.slice(0, 8)}...${signature.slice(-8)}`, [
-        { text: 'OK' },
-      ])
+      // Show success toast with transaction link
+      showPickSpermSuccessToast(toast, signature, selectedRacers, totalAmount)
 
       // Reset form
       setSelectedRacers([])
@@ -155,7 +157,8 @@ export const BetPanel = React.memo(() => {
       refetchUserBets()
     } catch (err: any) {
       console.error('[BetPanel] Submit selection error:', err)
-      Alert.alert('Submission Failed', err.message || 'Failed to submit selection. Please try again.')
+      const errorMessage = err.message || 'Failed to submit selection. Please try again.'
+      showPickSpermErrorToast(toast, errorMessage)
     }
   }, [
     isConnected,
@@ -169,6 +172,7 @@ export const BetPanel = React.memo(() => {
     roundId,
     refetchBalance,
     refetchUserBets,
+    toast,
   ])
 
   return (
@@ -440,7 +444,7 @@ export const BetPanel = React.memo(() => {
           {bettingLoading
             ? 'Processing...'
             : roundStatus?.isLocked
-              ? 'Betting Locked'
+              ? 'Pick Locked'
               : roundStatus?.isResolved
                 ? 'Round Ended'
                 : phase !== 'PREPARATION'
