@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { View, Text, Pressable, ScrollView } from 'react-native'
+import { View, Text, Pressable, ScrollView, Image } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AvatarDefaultIcon, SolColorIconSvg } from '../../components/svgs'
 import { useLeaderboard } from '../../hooks/useLeaderboard'
@@ -21,7 +21,7 @@ const LAMPORTS_PER_SOL = 1_000_000_000
 
 const LeaderboardScreenComponent = ({ onBack }: LeaderboardScreenProps) => {
   const insets = useSafeAreaInsets()
-  const { data: entries = [], isLoading } = useLeaderboard()
+  const { data: entries = [], isLoading, error } = useLeaderboard()
 
   const displayRows = useMemo(() => {
     const filled = [...entries]
@@ -83,6 +83,21 @@ const LeaderboardScreenComponent = ({ onBack }: LeaderboardScreenProps) => {
 
           {isLoading ? (
             <LeaderboardSkeleton />
+          ) : error ? (
+            <View className="items-center justify-center py-12">
+              <Text style={{ fontFamily: 'SpaceMono_400Regular' }} className="text-red-400 text-sm text-center mb-2">
+                Failed to load leaderboard
+              </Text>
+              <Text style={{ fontFamily: 'SpaceMono_400Regular' }} className="text-white/40 text-xs text-center">
+                {error instanceof Error ? error.message : 'Unknown error'}
+              </Text>
+            </View>
+          ) : entries.length === 0 ? (
+            <View className="items-center justify-center py-12">
+              <Text style={{ fontFamily: 'SpaceMono_400Regular' }} className="text-white/60 text-sm text-center">
+                No leaderboard data yet
+              </Text>
+            </View>
           ) : (
             <View className="gap-3">
               {displayRows.map((row) => (
@@ -147,7 +162,7 @@ const LeaderboardCardComponent = ({ row }: LeaderboardCardProps) => {
         <View className="flex-1 flex-row items-center gap-3">
           <View className="w-12 h-12 rounded-full bg-white/10 items-center justify-center overflow-hidden">
             {hasData && row.image ? (
-              <View className="w-full h-full bg-white/20" />
+              <Image source={{ uri: row.image }} style={{ width: 48, height: 48 }} resizeMode="cover" />
             ) : (
               <AvatarDefaultIcon width={32} height={32} />
             )}

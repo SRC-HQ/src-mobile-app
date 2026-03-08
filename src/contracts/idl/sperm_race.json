@@ -1,0 +1,193 @@
+{
+  "address": "2y2AdrVLKqwcA5GQEC1ULEHac3hH9ck565UBqzPaReJZ",
+  "metadata": {
+    "name": "sperm_race",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Sperm Race betting game on Solana"
+  },
+  "instructions": [
+    {
+      "name": "place_bet",
+      "docs": ["Place a bet on a sperm (user action)"],
+      "discriminator": [222, 62, 67, 220, 63, 166, 126, 33],
+      "accounts": [
+        {
+          "name": "round_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [114, 111, 117, 110, 100]
+              },
+              {
+                "kind": "arg",
+                "path": "round_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bet_record",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "round_id",
+          "type": "u64"
+        },
+        {
+          "name": "sperm_id",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "BabyKingVault",
+      "discriminator": [16, 115, 28, 91, 209, 216, 248, 224]
+    },
+    {
+      "name": "BetRecord",
+      "discriminator": [144, 217, 102, 109, 200, 164, 66, 178]
+    },
+    {
+      "name": "GlobalState",
+      "discriminator": [163, 46, 74, 168, 216, 123, 133, 98]
+    },
+    {
+      "name": "RoundAccount",
+      "discriminator": [130, 93, 63, 79, 92, 58, 4, 134]
+    }
+  ],
+  "types": [
+    {
+      "name": "BabyKingVault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "total_accumulated",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BetRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "round_id",
+            "type": "u64"
+          },
+          {
+            "name": "sperm_id",
+            "type": "u8"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GlobalState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "current_round",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RoundAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "round_id",
+            "type": "u64"
+          },
+          {
+            "name": "hashed_seed",
+            "type": {
+              "array": ["u8", 32]
+            }
+          },
+          {
+            "name": "end_slot",
+            "type": "u64"
+          },
+          {
+            "name": "winner_id",
+            "type": "u8"
+          },
+          {
+            "name": "is_locked",
+            "type": "bool"
+          },
+          {
+            "name": "total_pot",
+            "type": "u64"
+          },
+          {
+            "name": "is_resolved",
+            "type": "bool"
+          },
+          {
+            "name": "bets_per_sperm",
+            "type": {
+              "array": ["u64", 10]
+            }
+          },
+          {
+            "name": "baby_king_hit",
+            "type": "bool"
+          },
+          {
+            "name": "baby_king_jackpot_snapshot",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}
