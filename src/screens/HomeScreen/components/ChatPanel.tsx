@@ -84,26 +84,17 @@ const ChatPanelComponent = () => {
       const address = account.address.toString()
       const timestamp = Date.now()
 
-      // TODO: Remove signature requirement when backend implements session token
-      // Backend should add:
-      // 1. POST /auth/chat-session - Create session with one-time signature
-      // 2. POST /chats - Accept JWT token instead of signature per message
-      // This will eliminate wallet popup for every message
-
-      // Create message to sign (includes message content for security)
+      // Create message to sign with fresh timestamp
+      // Backend validates: signature + timestamp must be recent
       const messageToSign = createChatSignMessage(address, text, timestamp)
       const messageBytes = new TextEncoder().encode(messageToSign)
 
       // Sign the message - this will show wallet popup
-      // Note: Mobile Wallet Adapter requires approval for each signature for security
+      // This is required because backend validates signature with timestamp
       const signatureBytes = await signMessage(messageBytes)
       const signature = signatureToBase64(signatureBytes)
 
-      // TODO: Replace with session token approach:
-      // const token = await getStoredChatToken()
-      // await sendChatMutation.mutateAsync({ message: text, token })
-
-      // Send to API
+      // Send message with fresh signature
       await sendChatMutation.mutateAsync({
         message: text,
         address,

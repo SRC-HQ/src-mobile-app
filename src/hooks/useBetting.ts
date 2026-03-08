@@ -5,42 +5,9 @@ import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { SpermRace } from '../contracts/types/sperm_race'
 import * as IDL from '../contracts/idl/sperm_race.json'
+import { ENV, getRpcUrl, getCluster } from '../config/env'
 
-const PROGRAM_ID = new PublicKey(process.env.EXPO_PUBLIC_PROGRAM_ID ?? '2y2AdrVLKqwcA5GQEC1ULEHac3hH9ck565UBqzPaReJZ')
-
-const getRpcUrl = (): string => {
-  const network = process.env.EXPO_PUBLIC_SOLANA_NETWORK || 'devnet'
-  const customRpc = process.env.EXPO_PUBLIC_SOLANA_RPC_URL
-
-  if (customRpc) {
-    return customRpc
-  }
-
-  switch (network) {
-    case 'mainnet-beta':
-      return 'https://api.mainnet-beta.solana.com'
-    case 'devnet':
-      return 'https://api.devnet.solana.com'
-    case 'testnet':
-      return 'https://api.testnet.solana.com'
-    default:
-      return 'https://api.devnet.solana.com'
-  }
-}
-
-const getCluster = (): 'devnet' | 'testnet' | 'mainnet-beta' => {
-  const network = process.env.EXPO_PUBLIC_SOLANA_NETWORK || 'devnet'
-
-  switch (network) {
-    case 'mainnet-beta':
-      return 'mainnet-beta'
-    case 'testnet':
-      return 'testnet'
-    case 'devnet':
-    default:
-      return 'devnet'
-  }
-}
+const PROGRAM_ID = new PublicKey(ENV.PROGRAM_ID)
 
 export const useBetting = () => {
   const { account } = useMobileWallet()
@@ -136,7 +103,7 @@ export const useBetting = () => {
 
         console.log('[useBetting] Submit selection config:', {
           cluster,
-          network: process.env.EXPO_PUBLIC_SOLANA_NETWORK,
+          network: ENV.SOLANA_NETWORK,
           rpcUrl: getRpcUrl(),
           roundId,
           selectedSperms: Array.from(selectedSperms),

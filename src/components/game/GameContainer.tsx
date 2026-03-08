@@ -5,6 +5,7 @@ import { useGameStore } from '../../stores/gameStore'
 import { PreparationScene } from './PreparationScene'
 import { RaceScene } from './RaceScene'
 import { DistributionScene } from './DistributionScene'
+import { ENV } from '../../config/env'
 
 const GameContainerComponent: React.FC = () => {
   const { error } = useGameSocket()
@@ -13,9 +14,9 @@ const GameContainerComponent: React.FC = () => {
   // Log environment for debugging
   useEffect(() => {
     console.log('[GameContainer] Environment:', {
-      API_URL: process.env.EXPO_PUBLIC_API_URL,
-      WS_URL: process.env.EXPO_PUBLIC_WS_URL,
-      NETWORK: process.env.EXPO_PUBLIC_SOLANA_NETWORK,
+      API_URL: ENV.API_URL,
+      WS_URL: ENV.WS_URL,
+      NETWORK: ENV.SOLANA_NETWORK,
     })
   }, [])
 
@@ -45,7 +46,7 @@ const GameContainerComponent: React.FC = () => {
         <Text style={styles.loadingText}>
           {!isConnected ? 'Connecting to game server...' : 'Loading game state...'}
         </Text>
-        <Text style={styles.loadingHint}>{process.env.EXPO_PUBLIC_WS_URL || 'Connecting...'}</Text>
+        <Text style={styles.loadingHint}>{ENV.WS_URL || 'Connecting...'}</Text>
       </View>
     )
   }

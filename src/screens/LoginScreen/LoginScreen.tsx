@@ -1,14 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { View, Text, Alert, ToastAndroid, Platform, Image, Pressable, ActivityIndicator } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { storageService } from '../../services/storage'
+import { authService } from '../../services/auth'
 import { STORAGE_KEYS } from '../../utils/constants'
+import { createAuthSignMessage, signatureToBase64 } from '../../utils/wallet'
 
 export default function LoginScreen() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
   const wallet = useMobileWallet()
+  const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   console.log('LoginScreen render - wallet:', wallet)
 
@@ -20,27 +24,94 @@ export default function LoginScreen() {
     }
   }, [])
 
-  const handleSuccessfulConnection = useCallback(async () => {
-    try {
-      if (wallet?.account?.address) {
-        await storageService.setItem(STORAGE_KEYS.WALLET_ADDRESS, wallet.account.address.toString())
-        showToast('Wallet connected successfully!')
-        setLoading(false)
-        router.replace('/home')
-      }
-    } catch (error) {
-      console.error('Save wallet error:', error)
-      showToast('Failed to save wallet address')
-      setLoading(false)
+  const handleAuthenticationFlow = useCallback(async () => {
+    if (!wallet?.account?.address || !wallet?.signMessage || isProcessing) {
+      console.log('Auth flow skipped - not ready:', {
+        hasAccount: !!wallet?.account?.address,
+        hasSignMessage: !!wallet?.signMessage,
+        isProcessing,
+      })
+      return
     }
-  }, [wallet?.account, router, showToast])
+
+    // Clear connection timeout since we're proceeding with auth
+    if (connectionTimeoutRef.current) {
+      clearTimeout(connectionTimeoutRef.current)
+      connectionTimeoutRef.current = null
+    }
+
+    setIsProcessing(true)
+
+    try {
+      const address = wallet.account.address.toString()
+
+      // Add small delay to ensure wallet is fully ready
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      // Sign authentication message once during connection
+      console.log('Requesting authentication signature...')
+      const timestamp = Date.now()
+      const messageToSign = createAuthSignMessage(address, timestamp)
+      const messageBytes = new TextEncoder().encode(messageToSign)
+
+      const signatureBytes = await wallet.signMessage(messageBytes)
+      const signature = signatureToBase64(signatureBytes)
+
+      // Save authentication session
+      await authService.saveAuthSession({
+        address,
+        signature,
+        timestamp,
+      })
+
+      await storageService.setItem(STORAGE_KEYS.WALLET_ADDRESS, address)
+      showToast('Wallet connected successfully!')
+
+      // Navigate to home
+      router.replace('/home')
+    } catch (signError: any) {
+      console.error('Sign message error:', signError)
+
+      if (
+        signError?.message?.includes('cancel') ||
+        signError?.message?.includes('reject') ||
+        signError?.message?.includes('Cancellation')
+      ) {
+        showToast('Authentication cancelled')
+      } else {
+        showToast('Failed to authenticate. Please try again.')
+      }
+
+      // Disconnect wallet if signature fails
+      if (wallet?.disconnect) {
+        try {
+          await wallet.disconnect()
+        } catch (disconnectError) {
+          console.error('Disconnect error:', disconnectError)
+        }
+      }
+    } finally {
+      setLoading(false)
+      setIsProcessing(false)
+    }
+  }, [wallet, router, showToast, isProcessing])
 
   // Monitor account changes after connection
   useEffect(() => {
-    if (wallet?.account?.address && loading) {
-      handleSuccessfulConnection()
+    // Only trigger auth flow if:
+    // 1. Wallet account is available
+    // 2. We're in loading state (user clicked connect)
+    // 3. Not already processing
+    // 4. signMessage function is available
+    if (wallet?.account?.address && wallet?.signMessage && loading && !isProcessing) {
+      console.log('Wallet connected, starting authentication flow...')
+      console.log('Wallet state:', {
+        address: wallet.account.address.toString(),
+        hasSignMessage: !!wallet.signMessage,
+      })
+      handleAuthenticationFlow()
     }
-  }, [wallet?.account, loading, handleSuccessfulConnection])
+  }, [wallet?.account?.address, wallet?.signMessage, loading, isProcessing, handleAuthenticationFlow])
 
   const handleConnectWallet = async () => {
     console.log('=== handleConnectWallet called ===')
@@ -54,15 +125,30 @@ export default function LoginScreen() {
     try {
       setLoading(true)
       console.log('Calling wallet.connect()...')
-      const result = await wallet.connect()
-      console.log('Connect result:', result)
+      await wallet.connect()
+      console.log('Connect initiated, waiting for wallet approval...')
 
-      // If connect returns immediately without account, wait for useEffect
-      if (!result || !wallet?.account?.address) {
-        console.log('Waiting for wallet approval...')
+      // Set timeout to reset loading state if wallet doesn't respond
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current)
       }
+
+      connectionTimeoutRef.current = setTimeout(() => {
+        if (loading && !isProcessing && !wallet?.account?.address) {
+          console.log('Connection timeout - wallet not responding')
+          showToast('Connection timeout. Please try again.')
+          setLoading(false)
+        }
+      }, 30000) // 30 seconds timeout
+
+      // The useEffect will handle the rest when wallet.account is available
     } catch (error: any) {
       console.error('Connect wallet error:', error)
+
+      // Clear timeout on error
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current)
+      }
 
       // Handle user cancellation
       if (error?.message?.includes('cancel') || error?.message?.includes('reject')) {
@@ -74,6 +160,15 @@ export default function LoginScreen() {
       setLoading(false)
     }
   }
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current)
+      }
+    }
+  }, [])
 
   return (
     <View className="flex-1 bg-background">
@@ -114,7 +209,12 @@ export default function LoginScreen() {
           })}
         >
           {loading ? (
-            <ActivityIndicator color="#ffffff" />
+            <View className="flex-row items-center gap-2">
+              <ActivityIndicator color="#ffffff" />
+              <Text style={{ fontFamily: 'SpaceMono_700Bold', color: '#ffffff', fontSize: 14 }}>
+                {isProcessing ? 'Authenticating...' : 'Connecting...'}
+              </Text>
+            </View>
           ) : (
             <Text style={{ fontFamily: 'SpaceMono_700Bold', color: '#000000', fontSize: 16 }}>Connect Wallet</Text>
           )}
