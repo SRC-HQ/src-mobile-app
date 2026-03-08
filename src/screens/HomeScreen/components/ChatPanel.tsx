@@ -1,13 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { View, Text, ScrollView, TextInput, Pressable, Platform, Keyboard, Animated } from 'react-native'
+import { View, Text, ScrollView, TextInput, Pressable, Platform, Keyboard, Animated, Alert } from 'react-native'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
-
-interface ChatMessage {
-  id: string
-  user: string
-  message: string
-  time: string
-}
+import { useChats, useSendChat } from '../../../hooks/useChat'
+import { createChatSignMessage, signatureToBase64 } from '../../../utils/wallet'
+import { formatTimeAgo, prettyTruncate } from '../../../utils/format'
+import { ChatSkeleton } from '../../../components/LoadingSkeleton'
 
 const ChatBubble = React.memo(({ user, message, time }: { user: string; message: string; time: string }) => (
   <View className="mb-4">
@@ -33,158 +30,14 @@ const ChatBubble = React.memo(({ user, message, time }: { user: string; message:
 ChatBubble.displayName = 'ChatBubble'
 
 const ChatPanelComponent = () => {
-  const { account } = useMobileWallet()
+  const { account, signMessage } = useMobileWallet()
   const isConnected = !!account?.address
   const scrollViewRef = useRef<ScrollView>(null)
   const keyboardHeight = useRef(new Animated.Value(0)).current
 
   const [message, setMessage] = useState('')
-  const [messages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      user: 'CryptoKing',
-      message: 'Good luck everyone! 🎮',
-      time: '2h ago',
-    },
-    {
-      id: '2',
-      user: 'SpermRacer',
-      message: "Let's go! I'm betting on #3 this round, feeling lucky today!",
-      time: '1h ago',
-    },
-    {
-      id: '3',
-      user: 'MoonShot',
-      message: 'Anyone else going all in? 🚀',
-      time: '1h ago',
-    },
-    {
-      id: '4',
-      user: 'DiamondHands',
-      message: 'This is intense! The last race was crazy, I almost won but #7 came from behind 💎',
-      time: '55m ago',
-    },
-    {
-      id: '5',
-      user: 'RaceChamp',
-      message: 'GG to the winners last round!',
-      time: '50m ago',
-    },
-    {
-      id: '6',
-      user: 'LuckySperm',
-      message: 'My sperm is gonna win this time 😎',
-      time: '45m ago',
-    },
-    {
-      id: '7',
-      user: 'BabyKingFan',
-      message: 'Baby King hit incoming! 👑',
-      time: '40m ago',
-    },
-    {
-      id: '8',
-      user: 'SOLWarrior',
-      message: 'Just placed 5 SOL on #7! This is my biggest bet yet, wish me luck guys!',
-      time: '35m ago',
-    },
-    {
-      id: '9',
-      user: 'RocketMan',
-      message: 'To the moon! 🌙',
-      time: '30m ago',
-    },
-    {
-      id: '10',
-      user: 'WhaleAlert',
-      message: 'Someone just bet 50 SOL! 🐋',
-      time: '28m ago',
-    },
-    {
-      id: '11',
-      user: 'SpeedDemon',
-      message: "I've been tracking the stats and #3 has the best win rate this week",
-      time: '25m ago',
-    },
-    {
-      id: '12',
-      user: 'GamingPro',
-      message: 'This game is addictive! 🎯',
-      time: '22m ago',
-    },
-    {
-      id: '13',
-      user: 'CryptoNinja',
-      message: 'Anyone know when the next race starts?',
-      time: '20m ago',
-    },
-    {
-      id: '14',
-      user: 'BetMaster',
-      message: 'I won 3 races in a row yesterday! The strategy is to always bet on the underdog',
-      time: '18m ago',
-    },
-    {
-      id: '15',
-      user: 'SolanaFan',
-      message: 'Love this game! Best thing on Solana 💜',
-      time: '15m ago',
-    },
-    {
-      id: '16',
-      user: 'RaceKing',
-      message: 'LFG! 🔥',
-      time: '12m ago',
-    },
-    {
-      id: '17',
-      user: 'TokenHolder',
-      message: 'Just joined! How does the Baby King bonus work exactly?',
-      time: '10m ago',
-    },
-    {
-      id: '18',
-      user: 'VeteranPlayer',
-      message: 'Baby King gives you extra rewards if you hit it. It is random but worth it!',
-      time: '9m ago',
-    },
-    {
-      id: '19',
-      user: 'NewbieBetter',
-      message: 'Thanks for explaining! Placing my first bet now 🎲',
-      time: '8m ago',
-    },
-    {
-      id: '20',
-      user: 'ProGamer',
-      message: '#5 looking strong today',
-      time: '6m ago',
-    },
-    {
-      id: '21',
-      user: 'LuckyCharm',
-      message: 'I have a good feeling about this race! My lucky number is 7 and I am going all in 🍀',
-      time: '5m ago',
-    },
-    {
-      id: '22',
-      user: 'WinStreak',
-      message: 'On a 5 win streak! 💪',
-      time: '3m ago',
-    },
-    {
-      id: '23',
-      user: 'RaceAddict',
-      message: 'Cannot stop playing this game, it is so much fun and the community is awesome!',
-      time: '2m ago',
-    },
-    {
-      id: '24',
-      user: 'FinalBet',
-      message: 'Last bet of the day, let us make it count! 🎰',
-      time: '1m ago',
-    },
-  ])
+  const { data: messages, isLoading, error } = useChats(100)
+  const sendChatMutation = useSendChat()
 
   useEffect(() => {
     const keyboardWillShowListener = Keyboard.addListener(
@@ -196,7 +49,6 @@ const ChatPanelComponent = () => {
           useNativeDriver: false,
         }).start()
 
-        // Scroll to bottom when keyboard shows
         setTimeout(() => {
           scrollViewRef.current?.scrollToEnd({ animated: true })
         }, 100)
@@ -214,7 +66,6 @@ const ChatPanelComponent = () => {
       },
     )
 
-    // Scroll to bottom when component mounts
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: false })
     }, 100)
@@ -225,17 +76,58 @@ const ChatPanelComponent = () => {
     }
   }, [keyboardHeight])
 
-  const handleSend = useCallback(() => {
-    if (!message.trim() || !isConnected) return
-    // TODO: Implement send message
-    setMessage('')
-    // Dismiss keyboard after sending
-    Keyboard.dismiss()
-    // Scroll to bottom after sending
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true })
-    }, 100)
-  }, [message, isConnected])
+  const handleSend = useCallback(async () => {
+    const text = message.trim()
+    if (!text || !isConnected || !account?.address || !signMessage) return
+
+    try {
+      const address = account.address.toString()
+      const timestamp = Date.now()
+
+      // TODO: Remove signature requirement when backend implements session token
+      // Backend should add:
+      // 1. POST /auth/chat-session - Create session with one-time signature
+      // 2. POST /chats - Accept JWT token instead of signature per message
+      // This will eliminate wallet popup for every message
+
+      // Create message to sign (includes message content for security)
+      const messageToSign = createChatSignMessage(address, text, timestamp)
+      const messageBytes = new TextEncoder().encode(messageToSign)
+
+      // Sign the message - this will show wallet popup
+      // Note: Mobile Wallet Adapter requires approval for each signature for security
+      const signatureBytes = await signMessage(messageBytes)
+      const signature = signatureToBase64(signatureBytes)
+
+      // TODO: Replace with session token approach:
+      // const token = await getStoredChatToken()
+      // await sendChatMutation.mutateAsync({ message: text, token })
+
+      // Send to API
+      await sendChatMutation.mutateAsync({
+        message: text,
+        address,
+        signature,
+        timestamp,
+      })
+
+      setMessage('')
+      Keyboard.dismiss()
+
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true })
+      }, 100)
+    } catch (error) {
+      console.error('Failed to send message:', error)
+
+      if (error instanceof Error && (error.message.includes('cancel') || error.message.includes('reject'))) {
+        // User cancelled - just dismiss, don't show error
+        console.log('User cancelled message signing')
+      } else {
+        Alert.alert('Error', error instanceof Error ? error.message : 'Failed to send message')
+      }
+    }
+  }, [message, isConnected, account, signMessage, sendChatMutation])
 
   return (
     <Animated.View
@@ -245,7 +137,6 @@ const ChatPanelComponent = () => {
         marginBottom: keyboardHeight,
       }}
     >
-      {/* Chat List */}
       <ScrollView
         ref={scrollViewRef}
         className="flex-1 p-4"
@@ -254,45 +145,82 @@ const ChatPanelComponent = () => {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
-        {messages.map((msg) => (
-          <ChatBubble key={msg.id} user={msg.user} message={msg.message} time={msg.time} />
-        ))}
+        {isLoading && <ChatSkeleton />}
+        {error && (
+          <View className="items-center justify-center py-8">
+            <Text style={{ fontFamily: 'SpaceMono_400Regular' }} className="text-red-400 text-sm text-center">
+              Failed to load messages
+            </Text>
+            <Text style={{ fontFamily: 'SpaceMono_400Regular' }} className="text-gray-500 text-xs text-center mt-2">
+              {error instanceof Error ? error.message : 'Unknown error'}
+            </Text>
+          </View>
+        )}
+        {!isLoading && !error && messages && messages.length === 0 && (
+          <View className="items-center justify-center py-8">
+            <Text style={{ fontFamily: 'SpaceMono_400Regular' }} className="text-gray-500 text-sm text-center">
+              No messages yet. Be the first to chat!
+            </Text>
+          </View>
+        )}
+        {!isLoading &&
+          !error &&
+          messages &&
+          messages
+            .slice()
+            .reverse()
+            .map((msg) => (
+              <ChatBubble
+                key={msg.id}
+                user={prettyTruncate(msg.user_address, 10, 'mid')}
+                message={msg.message}
+                time={formatTimeAgo(msg.created_at)}
+              />
+            ))}
       </ScrollView>
 
-      {/* Input Area */}
       <View className="p-4 border-t border-white/10 bg-[#0a0b0d]">
+        {sendChatMutation.error && (
+          <View className="mb-2 p-2 bg-red-500/10 rounded">
+            <Text style={{ fontFamily: 'SpaceMono_400Regular' }} className="text-red-400 text-xs">
+              {sendChatMutation.error instanceof Error ? sendChatMutation.error.message : 'Failed to send'}
+            </Text>
+          </View>
+        )}
         <View className="flex-row items-center gap-2">
           <TextInput
             value={message}
             onChangeText={setMessage}
-            editable={isConnected}
+            editable={isConnected && !sendChatMutation.isPending}
             placeholder={isConnected ? 'Type your message...' : 'Connect wallet to chat...'}
             placeholderTextColor="rgba(156, 163, 175, 1)"
             style={{ fontFamily: 'SpaceMono_400Regular' }}
             className={`flex-1 bg-transparent border border-white/10 rounded-lg px-3 py-3 text-sm text-white ${
-              !isConnected ? 'opacity-50' : ''
+              !isConnected || sendChatMutation.isPending ? 'opacity-50' : ''
             }`}
             onFocus={() => {
-              // Scroll to bottom when input is focused
               setTimeout(() => {
                 scrollViewRef.current?.scrollToEnd({ animated: true })
               }, 300)
             }}
             returnKeyType="send"
             onSubmitEditing={handleSend}
+            maxLength={500}
           />
           <Pressable
             onPress={handleSend}
-            disabled={!isConnected || !message.trim()}
+            disabled={!isConnected || !message.trim() || sendChatMutation.isPending}
             className={`py-3 px-5 rounded-lg items-center justify-center ${
-              isConnected && message.trim() ? 'bg-[#b6b0ff]' : 'bg-white/10'
+              isConnected && message.trim() && !sendChatMutation.isPending ? 'bg-[#b6b0ff]' : 'bg-white/10'
             }`}
           >
             <Text
               style={{ fontFamily: 'SpaceMono_700Bold' }}
-              className={`text-sm ${isConnected && message.trim() ? 'text-black' : 'text-white/50'}`}
+              className={`text-sm ${
+                isConnected && message.trim() && !sendChatMutation.isPending ? 'text-black' : 'text-white/50'
+              }`}
             >
-              Send
+              {sendChatMutation.isPending ? 'Sending...' : 'Send'}
             </Text>
           </Pressable>
         </View>

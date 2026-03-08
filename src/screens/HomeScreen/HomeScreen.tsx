@@ -8,11 +8,11 @@ import { SettingsScreen } from '../SettingsScreen'
 import { ProfileScreen } from '../ProfileScreen'
 import { LeaderboardScreen } from '../LeaderboardScreen'
 
-type TabType = 'bet' | 'history' | 'chat'
+type TabType = 'pick' | 'history' | 'chat'
 type ScreenType = 'home' | 'settings' | 'profile' | 'leaderboard'
 
 export const HomeScreen = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('bet')
+  const [activeTab, setActiveTab] = useState<TabType>('pick')
   const [activeScreen, setActiveScreen] = useState<ScreenType>('home')
   const insets = useSafeAreaInsets()
   const router = useRouter()
@@ -31,20 +31,6 @@ export const HomeScreen = () => {
   const handleCloseSettings = useCallback(() => setActiveScreen('home'), [])
   const handleBackToSettings = useCallback(() => setActiveScreen('settings'), [])
   const handleOpenSettings = useCallback(() => setActiveScreen('settings'), [])
-
-  // Memoize content rendering
-  const renderContent = useMemo(() => {
-    switch (activeTab) {
-      case 'bet':
-        return <BetPanel />
-      case 'history':
-        return <GameHistory />
-      case 'chat':
-        return <ChatPanel />
-      default:
-        return <BetPanel />
-    }
-  }, [activeTab])
 
   // Render different screens based on activeScreen
   if (activeScreen === 'settings') {
@@ -74,13 +60,23 @@ export const HomeScreen = () => {
 
       {/* Main Content - Below Navbar */}
       <View className="flex-1">
-        {/* Game Canvas */}
+        {/* Game Canvas - Always mounted, never unmounts */}
         <View className="h-64">
           <GameCanvas />
         </View>
 
-        {/* Content Area with Tabs */}
-        <View className="flex-1">{renderContent}</View>
+        {/* Content Area with Tabs - All panels stay mounted, only visibility changes */}
+        <View className="flex-1">
+          <View style={{ display: activeTab === 'pick' ? 'flex' : 'none' }} className="flex-1">
+            <BetPanel />
+          </View>
+          <View style={{ display: activeTab === 'history' ? 'flex' : 'none' }} className="flex-1">
+            <GameHistory />
+          </View>
+          <View style={{ display: activeTab === 'chat' ? 'flex' : 'none' }} className="flex-1">
+            <ChatPanel />
+          </View>
+        </View>
 
         {/* Bottom Tabs */}
         <View style={{ paddingBottom: insets.bottom }}>

@@ -1,9 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
+import { fetchWinnerRounds, type WinnerRound } from '../services/api/round-history'
+import { prettyTruncate, formatTimeAgo, formatSolAmount } from '../utils/format'
 
 export interface HistoryRow {
   id: string
   race: string
   block: string
+  txHash: string
   winnerIndex: number
   winnersCount: number
   totalPool: string
@@ -11,95 +14,36 @@ export interface HistoryRow {
   time: string
 }
 
-const fetchGameHistory = async (): Promise<HistoryRow[]> => {
-  // TODO: Replace with actual API call
-  // const response = await fetch('YOUR_API_ENDPOINT/game-history')
-  // return response.json()
+const LAMPORTS_PER_SOL = 1_000_000_000
 
-  // Mock data with simulated delay
-  await new Promise((resolve) => setTimeout(resolve, 800))
-  return [
-    {
-      id: '1',
-      race: '#3942',
-      block: 'Bx7k...9mP2',
-      winnerIndex: 0,
-      winnersCount: 125,
-      totalPool: '13.9628',
-      babyKing: 'Hit',
-      time: 'Just now',
-    },
-    {
-      id: '2',
-      race: '#3941',
-      block: 'Cx8m...4nQ3',
-      winnerIndex: 2,
-      winnersCount: 311,
-      totalPool: '15.6228',
-      babyKing: 'Miss',
-      time: '10s ago',
-    },
-    {
-      id: '3',
-      race: '#3940',
-      block: 'Dy9n...5oR4',
-      winnerIndex: 6,
-      winnersCount: 89,
-      totalPool: '11.2341',
-      babyKing: 'Hit',
-      time: '1m ago',
-    },
-    {
-      id: '4',
-      race: '#3939',
-      block: 'Ez0o...6pS5',
-      winnerIndex: 1,
-      winnersCount: 203,
-      totalPool: '18.5672',
-      babyKing: 'Miss',
-      time: '2m ago',
-    },
-    {
-      id: '5',
-      race: '#3938',
-      block: 'Fa1p...7qT6',
-      winnerIndex: 4,
-      winnersCount: 156,
-      totalPool: '14.3421',
-      babyKing: 'Hit',
-      time: '3m ago',
-    },
-    {
-      id: '6',
-      race: '#3937',
-      block: 'Gb2q...8rU7',
-      winnerIndex: 8,
-      winnersCount: 278,
-      totalPool: '19.8765',
-      babyKing: 'Miss',
-      time: '5m ago',
-    },
-    {
-      id: '7',
-      race: '#3936',
-      block: 'Hc3r...9sV8',
-      winnerIndex: 3,
-      winnersCount: 192,
-      totalPool: '16.4532',
-      babyKing: 'Hit',
-      time: '7m ago',
-    },
-    {
-      id: '8',
-      race: '#3935',
-      block: 'Id4s...0tW9',
-      winnerIndex: 5,
-      winnersCount: 145,
-      totalPool: '12.7891',
-      babyKing: 'Miss',
-      time: '10m ago',
-    },
-  ]
+const mapWinnerToHistoryRow = (item: WinnerRound): HistoryRow => {
+  const id = item.round_id
+  const race = `#${item.round_id}`
+  const block = prettyTruncate(item.tx_hash, 10, 'mid')
+  const txHash = item.tx_hash
+  const winnerIndex = typeof item.winner_sperm_id === 'number' ? item.winner_sperm_id : 0
+  const winnersCount = typeof item.total_user === 'number' ? item.total_user : 0
+  const totalPoolLamports = Number(item.total_pot || '0')
+  const totalPool = Number.isFinite(totalPoolLamports) ? formatSolAmount(totalPoolLamports / LAMPORTS_PER_SOL) : '0'
+  const babyKing = item.is_baby_king_hit === true ? 'Hit' : item.is_baby_king_hit === false ? 'Miss' : '—'
+  const time = formatTimeAgo(item.timestamp)
+
+  return {
+    id,
+    race,
+    block,
+    txHash,
+    winnerIndex,
+    winnersCount,
+    totalPool,
+    babyKing,
+    time,
+  }
+}
+
+const fetchGameHistory = async (): Promise<HistoryRow[]> => {
+  const winners = await fetchWinnerRounds()
+  return winners.map(mapWinnerToHistoryRow)
 }
 
 export const useGameHistory = () => {
@@ -109,4 +53,10 @@ export const useGameHistory = () => {
     staleTime: 1000 * 30, // 30 seconds
     refetchInterval: 1000 * 60, // Refetch every minute
   })
+}
+
+// Export function for manual pagination
+export const fetchGameHistoryPage = async (skip: number): Promise<HistoryRow[]> => {
+  const winners = await fetchWinnerRounds(skip)
+  return winners.map(mapWinnerToHistoryRow)
 }

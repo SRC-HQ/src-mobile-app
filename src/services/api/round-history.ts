@@ -1,0 +1,30 @@
+import Constants from 'expo-constants'
+
+export interface WinnerRound {
+  round_id: string
+  winner_sperm_id: number
+  total_pot: string
+  total_user: number
+  user_pots: unknown[]
+  timestamp: string
+  tx_hash: string
+  user_winnings: string | null
+  is_baby_king_hit?: boolean | null
+}
+
+const getApiBaseUrl = (): string => {
+  return Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL || 'https://api.spermrace.club'
+}
+
+export async function fetchWinnerRounds(skip?: number): Promise<WinnerRound[]> {
+  const apiBase = getApiBaseUrl()
+  const url =
+    typeof skip === 'number' ? `${apiBase}/round-history/winners?skip=${skip}` : `${apiBase}/round-history/winners`
+
+  const res = await fetch(url)
+  if (!res.ok) {
+    throw new Error('Failed to fetch winner rounds')
+  }
+  const data: WinnerRound[] = await res.json()
+  return Array.isArray(data) ? data : []
+}

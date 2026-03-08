@@ -1,27 +1,39 @@
 import { useQuery } from '@tanstack/react-query'
+import {
+  fetchLeaderboard,
+  fetchUserDetail,
+  type LeaderboardEntry as APILeaderboardEntry,
+} from '../services/api/leaderboard'
 
-interface LeaderboardEntry {
-  rank: number
-  user_address: string
-  total_winning_amount: string
+export interface LeaderboardEntry extends APILeaderboardEntry {
   username?: string
   image?: string
 }
 
-const fetchLeaderboard = async (): Promise<LeaderboardEntry[]> => {
-  // TODO: Replace with actual API call
-  // const response = await fetch('YOUR_API_ENDPOINT/leaderboard')
-  // return response.json()
+const fetchLeaderboardWithDetails = async (): Promise<LeaderboardEntry[]> => {
+  // Fetch leaderboard entries
+  const entries = await fetchLeaderboard()
 
-  // Mock data for now
-  await new Promise((resolve) => setTimeout(resolve, 500))
-  return []
+  // Fetch user details for each entry
+  const entriesWithDetails = await Promise.all(
+    entries.map(async (entry) => {
+      const userDetail = await fetchUserDetail(entry.user_address)
+      return {
+        ...entry,
+        username: userDetail?.username ?? undefined,
+        image: userDetail?.image ?? undefined,
+      }
+    }),
+  )
+
+  return entriesWithDetails
 }
 
 export const useLeaderboard = () => {
   return useQuery({
     queryKey: ['leaderboard'],
-    queryFn: fetchLeaderboard,
+    queryFn: fetchLeaderboardWithDetails,
     staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchInterval: 1000 * 60 * 5, // Refetch every 5 minutes
   })
 }

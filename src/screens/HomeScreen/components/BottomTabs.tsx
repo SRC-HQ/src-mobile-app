@@ -1,7 +1,7 @@
 import React from 'react'
 import { View, Text, Pressable } from 'react-native'
 
-type TabType = 'bet' | 'history' | 'chat'
+type TabType = 'pick' | 'history' | 'chat'
 
 interface BottomTabsProps {
   activeTab: TabType
@@ -10,7 +10,7 @@ interface BottomTabsProps {
 
 export const BottomTabs = ({ activeTab, onTabChange }: BottomTabsProps) => {
   const tabs: { id: TabType; label: string }[] = [
-    { id: 'bet', label: 'Bet' },
+    { id: 'pick', label: 'Pick' },
     { id: 'history', label: 'History' },
     { id: 'chat', label: 'Chat' },
   ]

@@ -29,7 +29,10 @@ module.exports = {
     extra: {
       EXPO_PUBLIC_SOLANA_NETWORK: process.env.EXPO_PUBLIC_SOLANA_NETWORK || 'devnet',
       EXPO_PUBLIC_RPC_ENDPOINT: process.env.EXPO_PUBLIC_RPC_ENDPOINT || 'https://api.devnet.solana.com',
-      EXPO_PUBLIC_APP_ENV: process.env.EXPO_PUBLIC_APP_ENV || 'devnet',
+      EXPO_PUBLIC_APP_ENV: process.env.EXPO_PUBLIC_APP_ENV || 'development',
+      EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL || 'https://api.spermrace.club',
+      EXPO_PUBLIC_WS_URL: process.env.EXPO_PUBLIC_WS_URL || 'wss://api.spermrace.club/game',
+      EXPO_PUBLIC_PROGRAM_ID: process.env.EXPO_PUBLIC_PROGRAM_ID || '2y2AdrVLKqwcA5GQEC1ULEHac3hH9ck565UBqzPaReJZ',
     },
     plugins: ['expo-router'],
   },
