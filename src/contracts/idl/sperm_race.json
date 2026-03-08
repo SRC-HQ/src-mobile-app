@@ -8,6 +8,58 @@
   },
   "instructions": [
     {
+      "name": "claim_winnings",
+      "discriminator": [161, 215, 24, 59, 14, 236, 242, 221],
+      "accounts": [
+        {
+          "name": "round_account",
+          "writable": true
+        },
+        {
+          "name": "global_state",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [103, 108, 111, 98, 97, 108, 95, 115, 116, 97, 116, 101]
+              }
+            ]
+          }
+        },
+        {
+          "name": "baby_king_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 97, 98, 121, 95, 107, 105, 110, 103, 95, 118, 97, 117, 108, 116]
+              }
+            ]
+          }
+        },
+        {
+          "name": "bet_record",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "sperm_id",
+          "type": "u8"
+        }
+      ]
+    },
+    {
       "name": "place_bet",
       "docs": ["Place a bet on a sperm (user action)"],
       "discriminator": [222, 62, 67, 220, 63, 166, 126, 33],
