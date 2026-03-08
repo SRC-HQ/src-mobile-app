@@ -2,6 +2,7 @@ import React from 'react'
 import { View, Text, Pressable } from 'react-native'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { AvatarDefaultIcon, SolColorIconSvg } from '../../../components/svgs'
+import { useWalletBalance } from '../../../hooks/useWalletBalance'
 
 interface NavbarProps {
   leftInset?: number
@@ -12,9 +13,7 @@ interface NavbarProps {
 export const Navbar = ({ leftInset = 0, rightInset = 0, onOpenSettings }: NavbarProps) => {
   const { account, connect } = useMobileWallet()
   const isConnected = !!account?.address
-
-  // Mock balance - replace with actual balance from your wallet hook
-  const balance = 0.0
+  const { balanceInSol, isLoading } = useWalletBalance()
 
   return (
     <View
@@ -44,7 +43,7 @@ export const Navbar = ({ leftInset = 0, rightInset = 0, onOpenSettings }: Navbar
         <View className="flex-row items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/10">
           <SolColorIconSvg width={16} height={14} />
           <Text style={{ fontFamily: 'SpaceMono_700Bold' }} className="text-sm text-white">
-            {balance.toFixed(4)}
+            {isLoading ? '...' : balanceInSol !== null ? balanceInSol.toFixed(4) : '0.0000'}
           </Text>
         </View>
       )}

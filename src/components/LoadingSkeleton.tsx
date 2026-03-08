@@ -139,3 +139,23 @@ export const GameHistorySkeleton = () => {
     </View>
   )
 }
+
+export const ChatSkeleton = () => {
+  return (
+    <View className="gap-4">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <View key={index} className="flex-row">
+          <Skeleton width={32} height={32} borderRadius={16} className="mr-3" />
+          <View className="flex-1">
+            <View className="flex-row justify-between items-baseline mb-1">
+              <Skeleton width={80} height={12} />
+              <Skeleton width={50} height={10} />
+            </View>
+            <Skeleton width="90%" height={12} className="mb-1" />
+            <Skeleton width="70%" height={12} />
+          </View>
+        </View>
+      ))}
+    </View>
+  )
+}

@@ -48,5 +48,5 @@ app-example
 SKILL.md
 .agents
 
-# References - DO NOT COMPILE
-_src-monorepo-reference/
+# references
+src-monorepo/
