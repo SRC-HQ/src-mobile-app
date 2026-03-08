@@ -503,6 +503,16 @@ export const BetPanel = React.memo(() => {
         </View>
       </View>
 
+      {/* SKR Token Info Banner */}
+      <View className="rounded-lg border border-[#b6b0ff]/30 bg-[#b6b0ff]/5 p-3 mb-6">
+        <Text style={{ fontFamily: 'SpaceMono_700Bold' }} className="text-xs text-[#b6b0ff] mb-1">
+          Coming Soon
+        </Text>
+        <Text style={{ fontFamily: 'SpaceMono_400Regular' }} className="text-xs text-white/70">
+          Play with <Text className="font-bold text-white">$SKR</Text> token
+        </Text>
+      </View>
+
       {/* Select Your Racer */}
       <View className="mb-6">
         <View className="flex-row items-center justify-between mb-3">
