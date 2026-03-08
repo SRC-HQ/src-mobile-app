@@ -127,6 +127,56 @@ export const useBetting = () => {
 
         const roundAccountPda = getRoundAccountPda(roundId)
 
+        // Check if betting is locked on-chain
+        try {
+          const roundAccountInfo = await connection.getAccountInfo(roundAccountPda)
+
+          if (!roundAccountInfo) {
+            throw new Error('Round not found. Please refresh and try again.')
+          }
+
+          const data = roundAccountInfo.data
+
+          // Parse RoundAccount manually (same structure as useRoundStatus)
+          if (data.length < 148) {
+            throw new Error('Invalid round data. Please refresh and try again.')
+          }
+
+          let offset = 8 // Skip discriminator
+          offset += 8 // Skip round_id
+          offset += 32 // Skip hashed_seed
+          offset += 8 // Skip end_slot
+          offset += 1 // Skip winner_id
+
+          // Read is_locked (bool)
+          const isLocked = data[offset] !== 0
+          offset += 1
+          offset += 8 // Skip total_pot
+
+          // Read is_resolved (bool)
+          const isResolved = data[offset] !== 0
+
+          console.log('[useBetting] Round account state:', {
+            roundId,
+            isLocked,
+            isResolved,
+          })
+
+          if (isLocked) {
+            throw new Error('Betting is currently locked. Please wait for the next round.')
+          }
+
+          if (isResolved) {
+            throw new Error('This round has already been resolved. Please wait for the next round.')
+          }
+        } catch (err: any) {
+          if (err.message.includes('Round not found') || err.message.includes('Invalid round data')) {
+            throw err
+          }
+          // If it's a parsing error or other error, throw it
+          throw err
+        }
+
         // Build instructions for each sperm
         const instructions: any[] = []
         for (const spermId of Array.from(selectedSperms)) {
