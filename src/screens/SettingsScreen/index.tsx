@@ -5,6 +5,7 @@ import { AvatarDefaultIcon, QRCodeIconSvg, AccountIconSvg, LeaderboardIconSvg } 
 import { QRCodeBottomSheet } from './components/QRCodeBottomSheet'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { storageService } from '../../services/storage'
+import { authService } from '../../services/auth'
 import { STORAGE_KEYS } from '../../utils/constants'
 
 interface SettingsScreenProps {
@@ -21,6 +22,7 @@ const SettingsScreenComponent = ({ onNavigateToProfile, onNavigateToLeaderboard,
   const handleDisconnect = useCallback(async () => {
     try {
       await storageService.removeItem(STORAGE_KEYS.WALLET_ADDRESS)
+      await authService.clearAuth() // Clear authentication session
       await disconnect()
       onClose()
     } catch (error) {

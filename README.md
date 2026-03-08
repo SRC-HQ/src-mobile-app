@@ -28,49 +28,87 @@ If you encounter `ERESOLVE` errors during `npm install`, see [INSTALLATION_FIX.m
 npm install --legacy-peer-deps
 ```
 
-## 🌍 Environment
+## 🌍 Environment Configuration
 
-### Production (Devnet - Default)
+The app uses centralized environment configuration for better maintainability and security.
 
-```bash
-npm run dev
-npm run android
-npm run ios
-```
-
-Uses: `https://api.spermrace.club` with devnet network
-
-### Local Development
+### Quick Start
 
 ```bash
-npm run dev:local
-npm run android:local
-npm run ios:local
-```
+# Development
+npm run dev:dev
 
-Uses: `http://localhost:4000` with local API server
-
-### Devnet (Production)
-
-```bash
+# Devnet
 npm run dev:devnet
-npm run android:devnet
-npm run ios:devnet
+
+# Mainnet
+npm run dev:mainnet
 ```
 
-Uses: `https://api.spermrace.club` with devnet network
+### Environment Files
 
-### Mainnet (Production)
+- `.env` - Default environment (development)
+- `.env.development` - Development environment
+- `.env.devnet` - Devnet environment
+- `.env.mainnet` - Mainnet/Production environment
+- `.env.staging` - Staging environment (optional)
+- `.env.example` - Template file
+
+### Using Environment Variables in Code
+
+**✅ Correct way:**
+
+```typescript
+import { ENV, getRpcUrl, getCluster } from '@/config/env'
+
+const apiUrl = ENV.API_URL
+const rpcUrl = getRpcUrl()
+```
+
+**❌ Wrong way:**
+
+```typescript
+const apiUrl = process.env.EXPO_PUBLIC_API_URL // Don't do this!
+```
+
+### Available Scripts
+
+**Development Server:**
 
 ```bash
-npm run dev:mainnet
-npm run android:mainnet
-npm run ios:mainnet
+npm run dev          # Default (development)
+npm run dev:dev      # Development environment
+npm run dev:devnet   # Devnet environment
+npm run dev:mainnet  # Mainnet environment
 ```
 
-Uses: `https://api.spermrace.club` with mainnet network
+**Android:**
 
-See [ENV_CONFIGURATION.md](./ENV_CONFIGURATION.md) for detailed configuration.
+```bash
+npm run android:dev      # Development build
+npm run android:devnet   # Devnet build
+npm run android:mainnet  # Mainnet build
+```
+
+**iOS:**
+
+```bash
+npm run ios:dev      # Development build
+npm run ios:devnet   # Devnet build
+npm run ios:mainnet  # Mainnet build
+```
+
+### Android Build Flavors
+
+The app supports multiple build flavors for Android:
+
+- **dev** - `com.spermrace.app.dev`
+- **devnet** - `com.spermrace.app.devnet`
+- **prod** - `com.spermrace.app`
+
+This allows installing all variants on the same device simultaneously.
+
+📖 **Full documentation**: [docs/ENVIRONMENT_SETUP.md](./docs/ENVIRONMENT_SETUP.md)
 
 ## 📱 Features
 
